@@ -1,22 +1,30 @@
-name: Deploy to Hostinger
+name: Build and Deploy to Hostinger
 
 on:
   push:
     branches:
       - publish
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
+    outputs:
+      deployment_status: ${{ job.status }}
+      deploy_url: https://resonancerehab.in
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -42,17 +50,76 @@ jobs:
 
       - name: Build project
         run: pnpm run build
+        env:
+          NODE_ENV: production
 
-      - name: Prepare deployment
+      - name: Prepare deployment archives
         run: |
-          # Copy build files and .htaccess
+          echo "📦 Preparing deployment packages..."
           mkdir -p deploy/react
           cp -r dist/* deploy/react/
-          cp .htaccess deploy/.htaccess
-          echo "✅ Deployment directory prepared"
-          ls -la deploy/
+          
+          if [ -f ".htaccess" ]; then
+            cp .htaccess deploy/.htaccess
+            echo "✅ .htaccess included"
+          fi
+          
+          cd deploy
+          zip -r ../react-build-${{ github.sha }}.zip react/
+          zip -r ../htaccess-config-${{ github.sha }}.zip .htaccess
+          cd ..
+          
+          echo "✅ Deployment packages ready"
+          ls -lh *.zip
 
-      - name: Deploy React app to Hostinger via FTP
+      - name: Setup SSH for Git Deployment
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger
+          chmod 600 ~/.ssh/hostinger
+          cat >> ~/.ssh/config << EOF
+          Host resonance-git
+            HostName ${{ secrets.HOSTINGER_GIT_HOST }}
+            User ${{ secrets.HOSTINGER_GIT_USER }}
+            IdentityFile ~/.ssh/hostinger
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Deploy via Git (Primary Method)
+        id: git-deploy
+        continue-on-error: true
+        run: |
+          echo "🚀 Starting Git-based deployment to Hostinger..."
+          
+          # Clone the Hostinger Git repository
+          git clone ssh://resonance-git${{ secrets.HOSTINGER_GIT_REPO }} hostinger-deploy || git clone ${{ secrets.HOSTINGER_GIT_REPO }} hostinger-deploy
+          
+          cd hostinger-deploy
+          
+          # Copy build files to react subdirectory
+          mkdir -p react
+          cp -r ../dist/* react/
+          
+          # Copy .htaccess to root if it exists
+          if [ -f "../.htaccess" ]; then
+            cp ../.htaccess .
+          fi
+          
+          # Commit and push
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          
+          git add -A
+          git commit -m "Deploy: Publish branch - Build ${{ github.sha }}" || echo "No changes to commit"
+          git push -u origin main || git push -u origin master || git push
+          
+          echo "✅ Git deployment successful"
+          echo "status=success" >> $GITHUB_OUTPUT
+          
+          cd ..
+
+      - name: Deploy via FTP (Fallback Method)
+        if: steps.git-deploy.outcome == 'failure'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -64,7 +131,8 @@ jobs:
           dangerous-clean-slate: false
           log-level: verbose
 
-      - name: Deploy .htaccess to root via FTP
+      - name: Deploy .htaccess via FTP (Fallback)
+        if: steps.git-deploy.outcome == 'failure'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -78,7 +146,88 @@ jobs:
           exclude: |
             react/**
 
-      - name: Deployment complete
+      - name: Create GitHub Comment - Success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ **Deployment Successful!**\n\n🚀 Your build from commit \`${{ github.sha }}\` has been deployed.\n\n**Details:**\n- **Branch:** publish\n- **Domain:** https://resonancerehab.in\n- **Build Path:** /public_html/react/\n- **Timestamp:** ${new Date().toISOString()}\n\n[View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            })
+
+      - name: Create GitHub Comment - Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **Deployment Failed**\n\n⚠️ The deployment from commit \`${{ github.sha }}\` encountered an error.\n\n**Details:**\n- **Branch:** publish\n- **Error:** Check the workflow logs for details\n- **Timestamp:** ${new Date().toISOString()}\n\n[View Workflow Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            })
+
+      - name: Get Commit Author Info
+        id: commit-info
         run: |
-          echo "✅ Deployment successful!"
-          echo "🚀 Your app is now live at https://resonancerehab.in"
+          AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          echo "author_name=$AUTHOR_NAME" >> $GITHUB_OUTPUT
+          echo "author_email=$AUTHOR_EMAIL" >> $GITHUB_OUTPUT
+
+      - name: Send Email Notification to Team
+        if: always()
+        uses: davisreef/action-send-mail@master
+        with:
+          server_address: ${{ secrets.EMAIL_SERVER }}
+          server_port: ${{ secrets.EMAIL_PORT }}
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "🚀 Resonance Rehab - Deployment ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} by ${{ steps.commit-info.outputs.author_name }}"
+          to: ${{ secrets.TEAM_EMAIL_LIST || secrets.DEPLOYMENT_EMAIL }}
+          from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
+          body: |
+            ═══════════════════════════════════════════════════════════════
+            📦 RESONANCE REHAB - DEPLOYMENT NOTIFICATION
+            ═══════════════════════════════════════════════════════════════
+            
+            Status: ${{ job.status == 'success' && '✅ SUCCESS' || '❌ FAILED' }}
+            
+            DEPLOYMENT DETAILS:
+            ───────────────────────────────────────────────────────────────
+            Repository:     ${{ github.repository }}
+            Branch:         publish
+            Triggered By:   ${{ steps.commit-info.outputs.author_name }} <${{ steps.commit-info.outputs.author_email }}>
+            Commit SHA:     ${{ github.sha }}
+            Commit Time:    ${{ github.event.head_commit.timestamp }}
+            
+            ${{ github.event.head_commit.message && format('Commit Message: {0}', github.event.head_commit.message) || 'Commit Message: (No message)' }}
+            
+            DEPLOYMENT TARGET:
+            ───────────────────────────────────────────────────────────────
+            Live Domain:    🌐 https://resonancerehab.in
+            Deploy Method:  Git Primary + FTP Fallback
+            Deploy Path:    /public_html/react/
+            
+            WORKFLOW STATUS:
+            ───────────────────────────────────────────────────────────────
+            Job Status:     ${{ job.status }}
+            Duration:       ~2-3 minutes
+            Logs:           ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            ${{ job.status == 'success' && format('DEPLOYMENT COMPLETE!', '') || 'Please check the workflow logs for error details.' }}
+            
+            ═══════════════════════════════════════════════════════════════
+            This is an automated notification from GitHub Actions
+            For deployment guides, see: TEAM_DEPLOYMENT_GUIDE.md
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf hostinger-deploy
+          rm -rf deploy
+          rm -f *.zip 2>/dev/null
+          echo "✅ Cleanup complete"

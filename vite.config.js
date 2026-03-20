@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 
 export default defineConfig({
-  base: '/react/',
+  base: '/',
   plugins: [
     react({
       babel: {

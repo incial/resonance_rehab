@@ -41,6 +41,17 @@ const Navbar = () => {
       } ${isScrolled ? "bg-white/10 backdrop-blur-xs " : "bg-transparent"}`}
     >
       <Link
+        to="/"
+        onClick={handleLogoClick}
+        className="hidden md:inline-block absolute left-4 top-1/2 -translate-y-1/2 z-10003"
+      >
+        <img
+          src="/images/Hero/logoorg.png"
+          alt="Resonance Rehab logo"
+          className="h-12 w-auto sm:h-16 md:h-20"
+        />
+      </Link>
+      <Link
         className={`text-primary-color mt-0 md:mt-3 font-editorial text-lg sm:text-xl md:text-2xl relative md:absolute md:left-1/2 md:-translate-x-1/2 z-10002 transition-opacity duration-300 inline-block ${
           isOpen
             ? "md:opacity-0 pointer-events-none text-primary-color!"
