@@ -67,7 +67,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: ./react/
+          server-dir: /public_html/react/
           state-name: .ftp-deploy-sync-state.json
           dangerous-clean-slate: true
           log-level: verbose
