@@ -146,30 +146,6 @@ jobs:
           exclude: |
             react/**
 
-      - name: Create GitHub Comment - Success
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `✅ **Deployment Successful!**\n\n🚀 Your build from commit \`${{ github.sha }}\` has been deployed.\n\n**Details:**\n- **Branch:** publish\n- **Domain:** https://resonancerehab.in\n- **Build Path:** /public_html/react/\n- **Timestamp:** ${new Date().toISOString()}\n\n[View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
-            })
-
-      - name: Create GitHub Comment - Failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `❌ **Deployment Failed**\n\n⚠️ The deployment from commit \`${{ github.sha }}\` encountered an error.\n\n**Details:**\n- **Branch:** publish\n- **Error:** Check the workflow logs for details\n- **Timestamp:** ${new Date().toISOString()}\n\n[View Workflow Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
-            })
-
       - name: Get Commit Author Info
         id: commit-info
         run: |
@@ -180,7 +156,7 @@ jobs:
 
       - name: Send Email Notification to Team
         if: always()
-        uses: davisreef/action-send-mail@master
+        uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.EMAIL_SERVER }}
           server_port: ${{ secrets.EMAIL_PORT }}
