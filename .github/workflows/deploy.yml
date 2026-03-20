@@ -60,66 +60,18 @@ jobs:
           cp -r dist/* deploy/react/
           
           if [ -f ".htaccess" ]; then
-            cp .htaccess deploy/.htaccess
+            cp .htaccess deploy/react/.htaccess
             echo "✅ .htaccess included"
           fi
           
           cd deploy
           zip -r ../react-build-${{ github.sha }}.zip react/
-          zip -r ../htaccess-config-${{ github.sha }}.zip .htaccess
           cd ..
           
           echo "✅ Deployment packages ready"
           ls -lh *.zip
 
-      - name: Setup SSH for Git Deployment
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger
-          chmod 600 ~/.ssh/hostinger
-          cat >> ~/.ssh/config << EOF
-          Host resonance-git
-            HostName ${{ secrets.HOSTINGER_GIT_HOST }}
-            User ${{ secrets.HOSTINGER_GIT_USER }}
-            IdentityFile ~/.ssh/hostinger
-            StrictHostKeyChecking no
-          EOF
-
-      - name: Deploy via Git (Primary Method)
-        id: git-deploy
-        continue-on-error: true
-        run: |
-          echo "🚀 Starting Git-based deployment to Hostinger..."
-          
-          # Clone the Hostinger Git repository using SSH shorthand format
-          git clone resonance-git${{ secrets.HOSTINGER_GIT_REPO }} hostinger-deploy || exit 1
-          
-          cd hostinger-deploy
-          
-          # Copy build files to react subdirectory
-          mkdir -p react
-          cp -r ../dist/* react/
-          
-          # Copy .htaccess to root if it exists
-          if [ -f "../.htaccess" ]; then
-            cp ../.htaccess .
-          fi
-          
-          # Commit and push
-          git config user.email "github-actions@github.com"
-          git config user.name "GitHub Actions"
-          
-          git add -A
-          git commit -m "Deploy: Publish branch - Build ${{ github.sha }}" || echo "No changes to commit"
-          git push -u origin main || git push -u origin master || git push
-          
-          echo "✅ Git deployment successful"
-          echo "status=success" >> $GITHUB_OUTPUT
-          
-          cd ..
-
-      - name: Deploy via FTP (Fallback Method)
-        if: steps.git-deploy.outcome == 'failure'
+      - name: Deploy via FTP (Wipe & Replace)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -127,24 +79,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy/react/
           server-dir: /public_html/react/
-          state-name: .ftp-deploy-sync-state-react.json
-          dangerous-clean-slate: false
+          state-name: .ftp-deploy-sync-state.json
+          dangerous-clean-slate: true
           log-level: verbose
-
-      - name: Deploy .htaccess via FTP (Fallback)
-        if: steps.git-deploy.outcome == 'failure'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./deploy/
-          server-dir: /public_html/
-          state-name: .ftp-deploy-sync-state-htaccess.json
-          dangerous-clean-slate: false
-          log-level: verbose
-          exclude: |
-            react/**
 
       - name: Cleanup
         if: always()
