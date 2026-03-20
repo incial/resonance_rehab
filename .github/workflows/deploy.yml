@@ -53,23 +53,12 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Prepare deployment archives
+      - name: Prepare dist for deployment
         run: |
-          echo "📦 Preparing deployment packages..."
-          mkdir -p deploy/react
-          cp -r dist/* deploy/react/
-          
           if [ -f ".htaccess" ]; then
-            cp .htaccess deploy/react/.htaccess
+            cp .htaccess ./dist/.htaccess
             echo "✅ .htaccess included"
           fi
-          
-          cd deploy
-          zip -r ../react-build-${{ github.sha }}.zip react/
-          cd ..
-          
-          echo "✅ Deployment packages ready"
-          ls -lh *.zip
 
       - name: Deploy via FTP (Wipe & Replace)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -77,8 +66,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./deploy/react/
-          server-dir: /public_html/react/
+          local-dir: ./dist/
+          server-dir: ./react/
           state-name: .ftp-deploy-sync-state.json
           dangerous-clean-slate: true
           log-level: verbose
@@ -86,7 +75,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          rm -rf hostinger-deploy
-          rm -rf deploy
-          rm -f *.zip 2>/dev/null
+          rm -rf dist
           echo "✅ Cleanup complete"
