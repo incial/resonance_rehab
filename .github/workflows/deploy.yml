@@ -91,8 +91,8 @@ jobs:
         run: |
           echo "🚀 Starting Git-based deployment to Hostinger..."
           
-          # Clone the Hostinger Git repository
-          git clone ssh://resonance-git${{ secrets.HOSTINGER_GIT_REPO }} hostinger-deploy || git clone ${{ secrets.HOSTINGER_GIT_REPO }} hostinger-deploy
+          # Clone the Hostinger Git repository using SSH shorthand format
+          git clone resonance-git${{ secrets.HOSTINGER_GIT_REPO }} hostinger-deploy || exit 1
           
           cd hostinger-deploy
           
