@@ -46,3 +46,4 @@ Set values:
 - Team listing API falls back to local bundled data when Supabase is not configured.
 - Photo upload API requires valid Supabase login and allowed admin email.
 - Free tier has usage limits but no upfront cost.
+

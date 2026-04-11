@@ -10,11 +10,14 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
+    "@tailwindcss/postcss": "^4.2.2",
     "framer-motion": "^12.23.26",
     "gsap": "^3.12.5",
     "lucide-react": "^0.562.0",
     "next": "^16.2.3",
+    "postcss": "^8.5.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.11.0",

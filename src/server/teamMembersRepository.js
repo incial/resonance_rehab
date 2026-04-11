@@ -102,7 +102,93 @@ export const getTeamMembers = async () => {
   return (data || []).map(mapRowToMember);
 };
 
-export const updateTeamMemberPhoto = async ({ slug, mimeType, base64Data }) => {
+export const createTeamMember = async ({ name, mimeType, base64Data }) => {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    throw createHttpError(503, "Supabase is not configured on this deployment.");
+  }
+
+  if (!name || typeof name !== "string") {
+    throw createHttpError(400, "Team member name is required.");
+  }
+
+  const extension = ALLOWED_MIME_TYPES[mimeType];
+  if (!extension) {
+    throw createHttpError(400, "Only JPG, PNG, and WEBP images are allowed.");
+  }
+
+  if (!base64Data || typeof base64Data !== "string") {
+    throw createHttpError(400, "Image data is required.");
+  }
+
+  const imageBuffer = Buffer.from(base64Data, "base64");
+  if (imageBuffer.byteLength === 0 || imageBuffer.byteLength > MAX_IMAGE_SIZE_BYTES) {
+    throw createHttpError(400, "Image must be greater than 0 bytes and up to 5MB.");
+  }
+
+  // Get max member_id
+  const { data: maxIdData, error: maxIdError } = await supabase
+    .from("team_members")
+    .select("member_id")
+    .order("member_id", { ascending: false })
+    .limit(1);
+
+  if (maxIdError) {
+    throw createHttpError(500, maxIdError.message);
+  }
+
+  const nextMemberId = (maxIdData?.[0]?.member_id || 0) + 1;
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + nextMemberId;
+
+  // Upload image
+  const filePath = `${nextMemberId}/${randomUUID()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .upload(filePath, imageBuffer, {
+      contentType: mimeType,
+      upsert: false,
+      cacheControl: "31536000",
+    });
+
+  if (uploadError) {
+    throw createHttpError(400, uploadError.message);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(SUPABASE_BUCKET)
+    .getPublicUrl(filePath);
+
+  // Insert into DB
+  const newRow = {
+    member_id: nextMemberId,
+    name: name,
+    slug: slug,
+    title: "New Team Member",
+    category: "uncategorized",
+    description: "Bio description to be added.",
+    image_url: publicUrlData.publicUrl,
+    credentials: "TBD",
+    age: "All ages",
+    languages: "English",
+    about: "More about this member soon.",
+    areas_of_focus: [],
+    approach: [],
+  };
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("team_members")
+    .insert([newRow])
+    .select("*")
+    .single();
+
+  if (insertError || !inserted) {
+    throw createHttpError(500, insertError?.message || "Failed to create new team member.");
+  }
+
+  return mapRowToMember(inserted);
+};
+
+export const updateTeamMemberPhoto = async ({ slug, newName, mimeType, base64Data }) => {
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
     throw createHttpError(503, "Supabase is not configured on this deployment.");
@@ -110,6 +196,21 @@ export const updateTeamMemberPhoto = async ({ slug, mimeType, base64Data }) => {
 
   if (!slug || typeof slug !== "string") {
     throw createHttpError(400, "Team member slug is required.");
+  }
+
+  // Update name if conditionally requested, without changing photo
+  if (!base64Data && newName) {
+    const { data: updated, error: updateError } = await supabase
+      .from("team_members")
+      .update({ name: newName })
+      .eq("slug", slug)
+      .select("*")
+      .single();
+
+    if (updateError || !updated) {
+      throw createHttpError(500, updateError?.message || "Failed to update team member name.");
+    }
+    return mapRowToMember(updated);
   }
 
   const extension = ALLOWED_MIME_TYPES[mimeType];
@@ -162,9 +263,14 @@ export const updateTeamMemberPhoto = async ({ slug, mimeType, base64Data }) => {
     .from(SUPABASE_BUCKET)
     .getPublicUrl(filePath);
 
+  const updatePayload = { image_url: publicUrlData.publicUrl };
+  if (newName) {
+    updatePayload.name = newName;
+  }
+
   const { data: updated, error: updateError } = await supabase
     .from("team_members")
-    .update({ image_url: publicUrlData.publicUrl })
+    .update(updatePayload)
     .eq("slug", slug)
     .select("*")
     .single();
@@ -184,6 +290,46 @@ export const updateTeamMemberPhoto = async ({ slug, mimeType, base64Data }) => {
     if (removeError) {
       console.warn(`Failed to remove old team photo "${previousPath}": ${removeError.message}`);
     }
+  }
+
+  return mapRowToMember(updated);
+};
+
+export const deleteTeamMemberPhoto = async ({ slug }) => {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    throw createHttpError(503, "Supabase is not configured on this deployment.");
+  }
+
+  const { data: row, error: rowError } = await supabase
+    .from("team_members")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (rowError || !row) {
+    throw createHttpError(404, "Team member not found.");
+  }
+
+  const previousPath = getStoragePathFromPublicUrl(row.image_url);
+  if (previousPath) {
+    const { error: removeError } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .remove([previousPath]);
+    if (removeError) {
+      console.warn(`Failed to remove team photo "${previousPath}": ${removeError.message}`);
+    }
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("team_members")
+    .update({ image_url: null })
+    .eq("slug", slug)
+    .select("*")
+    .single();
+
+  if (updateError || !updated) {
+    throw createHttpError(500, updateError?.message || "Failed to delete team member photo.");
   }
 
   return mapRowToMember(updated);

@@ -1,5 +1,5 @@
 import { verifyAdminAccessToken } from "@/server/adminAuth";
-import { updateTeamMemberPhoto } from "@/server/teamMembersRepository";
+import { updateTeamMemberPhoto, deleteTeamMemberPhoto } from "@/server/teamMembersRepository";
 
 export const config = {
   api: {
@@ -11,32 +11,32 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
+  if (req.method !== "POST" && req.method !== "DELETE") {
+    res.setHeader("Allow", ["POST", "DELETE"]);
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
     const authHeader = req.headers.authorization || "";
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.slice("Bearer ".length).trim()
-      : "";
+    const token = authHeader.replace(/^Bearer\s+/, "");
     await verifyAdminAccessToken(token);
 
-    const { slug, mimeType, base64Data } = req.body || {};
-    const updatedMember = await updateTeamMemberPhoto({
-      slug,
-      mimeType,
-      base64Data,
-    });
+    if (req.method === "DELETE") {
+      const { slug } = req.body;
+      const updatedMember = await deleteTeamMemberPhoto({ slug });
+      return res.status(200).json({ success: true, member: updatedMember });
+    }
 
-    return res.status(200).json({
-      message: "Photo uploaded successfully",
-      member: updatedMember,
-    });
+    // POST
+    const { slug, newName, mimeType, base64Data } = req.body;
+    const updatedMember = await updateTeamMemberPhoto({ slug, newName, mimeType, base64Data });
+
+    return res.status(200).json({ success: true, member: updatedMember });
   } catch (error) {
-    return res.status(error.status || 500).json({
-      error: error.message || "Unable to upload team photo",
+    const status = error.status || 500;
+    return res.status(status).json({
+      error: error.message || "An unexpected error occurred",
     });
   }
 }
+
