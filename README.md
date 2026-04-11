@@ -13,10 +13,10 @@
 <br>
 
 <a href="#">
-  <img alt="Framework" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white">
+  <img alt="Framework" src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white">
 </a>
 <a href="#">
-  <img alt="Build Tool" src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white">
+  <img alt="UI" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white">
 </a>
 <a href="#">
   <img alt="Styling" src="https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white">
@@ -29,7 +29,8 @@
 
 <a href="docs/DOCUMENTATION.md">📖 Documentation</a> ·
 <a href="docs/QUICKSTART.md">⚡ Quick Start</a> ·
-<a href="docs/FEATURES.md">🛠️ Features</a>
+<a href="docs/FEATURES.md">🛠️ Features</a> ·
+<a href="docs/SUPABASE_SETUP.md">🗄️ Supabase Setup</a>
 
 </div>
 
@@ -50,7 +51,7 @@ Instead of fragmented healthcare information, Resonance Rehab provides a **clean
 ## 🚀 Features
 
 - **Feature-First Architecture** — Scalable and maintainable codebase structure
-- **Modern Tech Stack** — Built with React 19, Vite, and Tailwind CSS v4
+- **Modern Tech Stack** — Built with Next.js, React 19, and Tailwind CSS v4
 - **Performance Optimized** — Smooth animations with Framer Motion & GSAP
 - **Comprehensive Catalog** — Detailed sections for conditions, services, and team profiles
 - **Interactive UI** — Mobile-first responsive design
@@ -66,7 +67,7 @@ Resonance Rehab is built using modern web technologies
 
 <div align="center">
 
-<img src="https://skillicons.dev/icons?i=react,vite,tailwind,js,html,css" alt="Tech Stack" />
+<img src="https://skillicons.dev/icons?i=nextjs,react,tailwind,js,html,css" alt="Tech Stack" />
 
 </div>
 
@@ -88,6 +89,9 @@ pnpm dev
 
 # Production build
 pnpm build
+
+# Start production server
+pnpm start
 ```
 
 ---

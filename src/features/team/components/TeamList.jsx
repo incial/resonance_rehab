@@ -1,7 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { teamData } from "@/data/teamData";
+import useTeamMembers from "@/features/team/hooks/useTeamMembers";
+import {
+  getClinicalAndBehaviour,
+  getMembersByCategory,
+} from "@/features/team/utils/teamMembers";
 
 const TeamCard = ({ member, onClick }) => (
   <div
@@ -35,6 +39,7 @@ const TeamCard = ({ member, onClick }) => (
 
 const TeamList = () => {
   const navigate = useNavigate();
+  const { members } = useTeamMembers();
 
   const handleSelectMember = (member) => {
     navigate(`/team/${member.slug}`);
@@ -53,10 +58,10 @@ const TeamList = () => {
 
   // Get members by category
   const clinicalPsychologistsAndBehaviourTherapists =
-    teamData.clinicalPsychologistsAndBehaviourTherapists;
-  const occupationalTherapists = teamData.occupationalTherapists;
-  const speechPathologists = teamData.speechLanguagePathologists;
-  const specialEducators = teamData.specialEducators;
+    getClinicalAndBehaviour(members);
+  const occupationalTherapists = getMembersByCategory(members, "occupational");
+  const speechPathologists = getMembersByCategory(members, "speech");
+  const specialEducators = getMembersByCategory(members, "special-educator");
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,7 +129,7 @@ const TeamList = () => {
             Occupational Therapist
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
-            {teamData.occupationalTherapists.map((member) => (
+            {occupationalTherapists.map((member) => (
               <TeamCard
                 key={member.id}
                 member={member}

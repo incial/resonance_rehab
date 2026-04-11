@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { teamData } from "@/data/teamData";
+import useTeamMembers from "@/features/team/hooks/useTeamMembers";
 const phoneNumber = "918921065634";
 
 const openWhatsAppForMember = (memberName) => {
@@ -19,13 +19,22 @@ const openWhatsAppForMember = (memberName) => {
 const TeamMemberDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { members, loading } = useTeamMembers();
 
   // Find member across all categories
-  const member = teamData.allMembers.find((m) => m.slug === slug);
+  const member = members.find((m) => m.slug === slug);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <p className="text-primary-color font-urbanist text-base">Loading profile...</p>
+      </div>
+    );
+  }
 
   if (!member) {
     return (
