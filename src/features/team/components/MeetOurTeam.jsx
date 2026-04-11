@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import HomeTeamCard from "@/shared/components/ui/HomeTeamCard";
 import useTeamMembers from "@/features/team/hooks/useTeamMembers";
 
-const FEATURED_MEMBER_CATEGORY = "clinical-psychologist";
+const FEATURED_MEMBER_CATEGORY = "clinical-physiologist";
 const FEATURED_MEMBER_COUNT = 3;
 
 const MeetOurTeam = forwardRef((props, ref) => {

@@ -28,8 +28,8 @@ export default async function handler(req, res) {
     }
 
     // POST
-    const { slug, newName, mimeType, base64Data } = req.body;
-    const updatedMember = await updateTeamMemberPhoto({ slug, newName, mimeType, base64Data });
+    const { slug, newName, mimeType, base64Data, title, category, description, languages, credentials, age, about, areasOfFocus, approach, location, registration, certifications, experience } = req.body;
+    const updatedMember = await updateTeamMemberPhoto({ slug, newName, mimeType, base64Data, title, category, description, languages, credentials, age, about, areasOfFocus, approach, location, registration, certifications, experience });
 
     return res.status(200).json({ success: true, member: updatedMember });
   } catch (error) {

@@ -21,8 +21,8 @@ export default async function handler(req, res) {
       const token = authHeader.replace(/^Bearer\s+/, "");
       await verifyAdminAccessToken(token);
 
-      const { name, mimeType, base64Data } = req.body;
-      const newMember = await createTeamMember({ name, mimeType, base64Data });
+      const { name, mimeType, base64Data, title, category, description, credentials, age, languages, about, areasOfFocus, approach, location, registration, certifications, experience } = req.body;
+      const newMember = await createTeamMember({ name, mimeType, base64Data, title, category, description, credentials, age, languages, about, areasOfFocus, approach, location, registration, certifications, experience });
       
       return res.status(201).json({ success: true, member: newMember });
     }

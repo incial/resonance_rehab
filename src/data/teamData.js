@@ -6,7 +6,7 @@ export const teamData = {
       name: "Shanugha P",
       slug: "shanugha-p",
       title: "Consultant Psychologist",
-      category: "clinical-psychologist",
+      category: "clinical-physiologist",
       description: "Dedicated psychologist specializing in children's behavioral, emotional, and social well-being with a focus on parental counseling.",
       image: "/images/meetourteam/shanugha.png",
       credentials: "M.Sc. in Applied Psychology, B.Sc. in Psychology",
@@ -32,7 +32,7 @@ export const teamData = {
       name: "Jipson Sebastian",
       slug: "jipson-sebastian",
       title: "Consultant Psychologist",
-      category: "clinical-psychologist",
+      category: "clinical-physiologist",
       description: "Experienced psychologist providing support for emotional crises with extensive training in various psychotherapeutic approaches.",
       image: "/images/meetourteam/jipson.png",
       credentials: "M.Sc Psychology, B.Sc Psychology",
@@ -58,7 +58,7 @@ export const teamData = {
       name: "Sandra Chirakkal",
       slug: "sandra-chirakkal",
       title: "Consultant Psychologist & Behaviour Therapist",
-      category: "behaviour-therapist",
+      category: "behavioral-therapist",
       description: "Certified ABA therapist specializing in behavior intervention strategies and developmental support.",
       image: "/images/meetourteam/sandra.png",
       credentials: "M.Sc Applied Psychology, B.Sc Psychology, ABAT Certified",
@@ -85,7 +85,7 @@ export const teamData = {
       name: "Namitha Viswanath",
       slug: "namitha-viswanath",
       title: "Consultant Psychologist",
-      category: "clinical-psychologist",
+      category: "clinical-physiologist",
       description: "Experienced psychologist offering evidence-based treatments with focus on behavior modification and parental support.",
       image: "/images/meetourteam/namitha.png",
       credentials: "M.Sc Psychology",
@@ -110,14 +110,14 @@ export const teamData = {
       id: 5,
       name: "Jessica Samuel Nedumparampil",
       slug: "jessica-samuel-nedumparampil",
-      title: "Clinical Psychologist",
-      category: "clinical-psychologist",
+      title: "Clinical Physiologist",
+      category: "clinical-physiologist",
       description: "Highly skilled clinical psychologist specializing in CBT, DBT, and supportive psychotherapy techniques.",
       image: "/images/meetourteam/jessica.png",
       credentials: "M.Phil Clinical Psychology, M.Sc Clinical Psychology, B.Sc Psychology",
       age: "All Ages",
       languages: "English, Malayalam",
-      about: "Ms. Jessica Samuel Nedumparampil is a highly skilled Clinical Psychologist at St. Gregorios Medical Mission Hospital (Parumala Hospital). With comprehensive experience and qualifications including M.Phil (Clinical Psychology), she is committed to delivering exceptional psychological care, ensuring the well-being of patients.",
+      about: "Ms. Jessica Samuel Nedumparampil is a highly skilled Clinical Physiologist at St. Gregorios Medical Mission Hospital (Parumala Hospital). With comprehensive experience and qualifications including M.Phil (Clinical Psychology), she is committed to delivering exceptional psychological care, ensuring the well-being of patients.",
       areasOfFocus: [
         "Cognitive Behavioral Therapy (CBT)",
         "Dialectical Behavior Therapy (DBT)",
@@ -137,7 +137,7 @@ export const teamData = {
       name: "Veena P Chandran",
       slug: "veena-p-chandran",
       title: "Developmental Therapist (Early Interventionist)",
-      category: "special-educator",
+      category: "developmental-therapist",
       description: "RCI certified developmental therapist specializing in early intervention and developmental support for children.",
       image: "/images/meetourteam/veena1.png",
       credentials: "M.Sc Clinical and Counselling Psychology, B.Sc Psychology, PG Diploma in Early Intervention",
@@ -165,7 +165,7 @@ export const teamData = {
       name: "Alent Cheria Varghese",
       slug: "alent-cheria-varghese",
       title: "Occupational Therapist",
-      category: "occupational",
+      category: "occupational-therapist",
       description: "Pediatric occupational therapist creating joyful, child-centered therapy through play-based sessions and family collaboration.",
       image: "/images/meetourteam/alent.png",
       credentials: "Master of Occupational Therapy (Pediatrics), Bachelor of Occupational Therapy",
@@ -194,7 +194,7 @@ export const teamData = {
       name: "Muhammad Farhan",
       slug: "muhammad-farhan",
       title: "Occupational Therapist",
-      category: "occupational",
+      category: "occupational-therapist",
       description: "Licensed pediatric occupational therapist specializing in sensory integration and rehabilitation approaches.",
       image: "/images/meetourteam/muhammad.png",
       credentials: "Bachelor's in Occupational Therapy",
@@ -222,7 +222,7 @@ export const teamData = {
       name: "Aneesha Peter",
       slug: "aneesha-peter",
       title: "Speech-Language Pathologist",
-      category: "speech",
+      category: "speech-and-hearing-pathologist",
       description: "Certified SLP specializing in childhood apraxia, AAC systems, and natural language acquisition approaches.",
       image: "/images/meetourteam/aneesha1.png",
       credentials: "B.ASLP (Bachelor's in Audiology and Speech-Language Pathology)",
@@ -252,7 +252,7 @@ export const teamData = {
       name: "Amala P Binoe",
       slug: "amala-p-binoe",
       title: "Speech Language Pathologist",
-      category: "speech",
+      category: "speech-and-hearing-pathologist",
       description: "RCI certified SLP with expertise in OPT and AAC, delivering individualized therapy for diverse communication disorders.",
       image: "/images/meetourteam/amala.png",
       credentials: "M.ASLP, B.ASLP",
@@ -283,8 +283,8 @@ export const teamData = {
   id: 11,
   name: "Silpa Ravindran",
   slug: "silpa-ravindran",
-  title: "Clinical Psychologist",
-  category: "clinical-psychologist",
+  title: "Clinical Physiologist",
+  category: "clinical-physiologist",
   description: "Compassionate clinical psychologist providing professional support for children and families with behavioral, developmental, and emotional challenges.",
   image: "/images/meetourteam/silpa.png",
   credentials: "M.Phil Clinical Psychology, M.Sc Clinical Psychology",
@@ -311,7 +311,7 @@ export const teamData = {
       name: "Shahana Sherin",
       slug: "shahana-sherin",
       title: "Speech-Language Pathologist",
-      category: "speech",
+      category: "speech-and-hearing-pathologist",
       description: "RCI certified SLP providing comprehensive speech and language evaluations with expertise in OPT, AAC, and parent-led interventions.",
       image: "/images/meetourteam/shahana.png",
       credentials: "B.ASLP (Bachelor of Audiology and Speech-Language Pathology)",
@@ -340,7 +340,7 @@ export const teamData = {
   name: "Anushana V",
   slug: "anushana-v",
   title: "Speech-Language Pathologist",
-  category: "speech",
+  category: "speech-and-hearing-pathologist",
   description: "RCI certified Speech-Language Pathologist specializing in pediatric speech and language disorders with expertise in autism and developmental delays.",
   image: "/images/meetourteam/anushana.png",
   credentials: "B.ASLP (Bachelor of Audiology and Speech-Language Pathology)",
@@ -371,7 +371,7 @@ export const teamData = {
   name: "Athira",
   slug: "athira",
   title: "Behaviour Therapist",
-  category: "behaviour-therapist",
+  category: "behavioral-therapist",
   description: "Experienced behaviour therapist specializing in ABA with a focus on evidence-based interventions for children and youth with neurodevelopmental disorders.",
   image: "/images/meetourteam/athira.png",
   credentials: "M.Sc Clinical and Counselling Psychology, Graduate Certificate in Research Analysis",
@@ -402,7 +402,7 @@ about:"Works closely with children and youth, supporting their development throu
   name: "Jen Ponnachan",
   slug: "jen-ponnachan",
   title: "Occupational Therapist",
-  category: "occupational",
+  category: "occupational-therapist",
   description: "Pediatric occupational therapist with expertise in sensory integration therapy and rehabilitation-based approaches for children's development.",
   image: "/images/meetourteam/jen.png",
   credentials: "Bachelor's in Occupational Therapy",
@@ -432,7 +432,7 @@ about:"Works closely with children and youth, supporting their development throu
       name: "Mohammed Siyadh",
       slug: "mohammed-siyadh",
       title: "Occupational Therapist",
-      category: "occupational",
+      category: "occupational-therapist",
       description: "DHA and AIOTA licensed pediatric occupational therapist specializing in sensory integration, reflex integration and family-centered tele-rehabilitation.",
       image: "/images/meetourteam/mohammed.png",
       credentials: "Bachelor's in Occupational Therapy",
@@ -468,7 +468,7 @@ about:"Works closely with children and youth, supporting their development throu
   name: "Joicy Joy",
   slug: "joicy-joy",
   title: "Rehabilitation Psychologist",
-  category: "clinical-psychologist",
+  category: "clinical-physiologist",
   description: "RCI Licensed Rehabilitation Psychologist with 6+ years of experience specializing in children with disabilities and couple, adult & family counseling.",
   image: "/images/meetourteam/joicy.png",
   credentials: "Rehabilitation Psychologist, RCI Licensed",
@@ -499,7 +499,7 @@ about:"Works closely with children and youth, supporting their development throu
   name: "Nasarath Sulthana",
   slug: "nasarath-sulthana",
   title: "Consultant Psychologist",
-  category: "clinical-psychologist",
+  category: "clinical-physiologist",
   description: "Consultant Psychologist specializing in child and adolescent behavioral, emotional, and social development with expertise in assessments and evidence-based interventions.",
   image: "/images/meetourteam/nasarath.png",
   credentials: "",
@@ -537,30 +537,30 @@ about:"Works closely with children and youth, supporting their development throu
 
   // Category-specific getters
   get clinicalPsychologists() {
-    return this.getByCategory('clinical-psychologist');
+    return this.getByCategory('clinical-physiologist');
   },
 
   get behaviourTherapists() {
-    return this.getByCategory('behaviour-therapist');
+    return this.getByCategory('behavioral-therapist');
   },
 
-  // Combined Clinical Psychologists & Behaviour Therapists
+  // Combined Clinical Physiologists & Behaviour Therapists
   get clinicalPsychologistsAndBehaviourTherapists() {
     return [
-      ...this.getByCategory('clinical-psychologist'),
-      ...this.getByCategory('behaviour-therapist')
+      ...this.getByCategory('clinical-physiologist'),
+      ...this.getByCategory('behavioral-therapist')
     ];
   },
 
   get occupationalTherapists() {
-    return this.getByCategory('occupational');
+    return this.getByCategory('occupational-therapist');
   },
 
   get speechLanguagePathologists() {
-    return this.getByCategory('speech');
+    return this.getByCategory('speech-and-hearing-pathologist');
   },
 
   get specialEducators() {
-    return this.getByCategory('special-educator');
+    return this.getByCategory('developmental-therapist');
   }
 };

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import Head from "next/head";
+import Link from "next/link";
 
 const BTOA_CHUNK_SIZE = 0x8000;
 
@@ -20,18 +22,13 @@ const AdminPage = () => {
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(true);
   const [members, setMembers] = useState([]);
-  const [selectedSlug, setSelectedSlug] = useState("");
+  
   const [selectedFile, setSelectedFile] = useState(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [isDragging, setIsDragging] = useState(false);
-
-  const selectedMember = useMemo(
-    () => members.find((member) => member.slug === selectedSlug),
-    [members, selectedSlug]
-  );
 
   useEffect(() => {
     if (!supabase) {
@@ -74,7 +71,6 @@ const AdminPage = () => {
           throw new Error(data.error || "Failed to load team members");
         }
         setMembers(data.members || []);
-        setSelectedSlug(data.members?.[0]?.slug || "");
       } catch (error) {
         setStatus(error.message || "Unable to load team members");
       } finally {
@@ -117,97 +113,40 @@ const AdminPage = () => {
     setStatus("Signed out.");
   };
 
-  const handleUpload = async (event) => {
-    event.preventDefault();
-    if (!selectedSlug || !selectedFile) {
-      setStatus("Please choose a team member and an image file.");
-      return;
-    }
-
+  const handleDeleteMember = async (slug) => {
+    if (!window.confirm("Are you sure you want to delete this team member completely?")) return;
     setSubmitting(true);
     setStatus("");
 
     try {
-      const base64Data = await toBase64(selectedFile);
-      
-      // Determine new name from selected member's editable state
-      // (This requires us to track changes made by the user in the list)
-      const thisMember = members.find((member) => member.slug === selectedSlug);
-      const newName = thisMember?.newName || thisMember?.name;
-
-      const response = await fetch("/api/team-members/photo", {
-        method: "POST",
+      const response = await fetch(`/api/team-members/${slug}`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || ""}`,
         },
-        body: JSON.stringify({
-          slug: selectedSlug,
-          newName: newName,
-          mimeType: selectedFile.type,
-          base64Data,
-        }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Upload failed");
+        throw new Error(data.error || "Delete failed");
       }
 
-      setMembers((current) =>
-        current.map((member) =>
-          member.slug === selectedSlug ? { ...data.member, newName: undefined } : member
-        )
-      );
-      setSelectedFile(null);
-      setStatus("Photo and name updated successfully.");
+      setMembers((current) => current.filter((m) => m.slug !== slug));
+      setStatus("Team member deleted completely.");
     } catch (error) {
-      setStatus(error.message || "Unable to upload photo.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleUpdateNameOnly = async (slug, newName) => {
-    setSubmitting(true);
-    setStatus("");
-
-    try {
-      const response = await fetch("/api/team-members/photo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
-        body: JSON.stringify({
-          slug,
-          newName,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Name update failed");
-      }
-
-      setMembers((current) =>
-        current.map((member) =>
-          member.slug === slug ? { ...data.member, newName: undefined } : member
-        )
-      );
-      setStatus("Name updated successfully.");
-    } catch (error) {
-      setStatus(error.message || "Unable to update name.");
+      setStatus(error.message || "Unable to delete team member");
     } finally {
       setSubmitting(false);
     }
   };
 
   const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberDetails, setNewMemberDetails] = useState({ title: "", category: "", description: "", credentials: "", age: "", languages: "", about: "", areasOfFocus: "", approach: "",  });
 
   const handleCreateMember = async (event) => {
     event.preventDefault();
-    if (!newMemberName || !selectedFile || selectedSlug !== "NEW_MEMBER") {
+    if (!newMemberName || !selectedFile) {
       setStatus("Please enter a name and select an image for the new member.");
       return;
     }
@@ -217,6 +156,8 @@ const AdminPage = () => {
 
     try {
       const base64Data = await toBase64(selectedFile);
+      
+      const formatArray = (str) => str ? str.split(",").map(s => s.trim()).filter(Boolean) : [];
 
       const response = await fetch("/api/team-members", {
         method: "POST",
@@ -228,6 +169,16 @@ const AdminPage = () => {
           name: newMemberName,
           mimeType: selectedFile.type,
           base64Data,
+          title: newMemberDetails.title,
+          category: newMemberDetails.category,
+          description: newMemberDetails.description,
+          credentials: newMemberDetails.credentials,
+          age: newMemberDetails.age,
+          languages: newMemberDetails.languages,
+          about: newMemberDetails.about,
+          areasOfFocus: formatArray(newMemberDetails.areasOfFocus),
+          approach: formatArray(newMemberDetails.approach),
+          
         }),
       });
 
@@ -239,41 +190,21 @@ const AdminPage = () => {
       setMembers((current) => [...current, data.member]);
       setSelectedFile(null);
       setNewMemberName("");
+      setNewMemberDetails({
+        title: "",
+        category: "",
+        description: "",
+        credentials: "",
+        age: "",
+        languages: "",
+        about: "",
+        areasOfFocus: "",
+        approach: "",
+        
+      });
       setStatus("New team member added successfully.");
     } catch (error) {
       setStatus(error.message || "Unable to create team member.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeletePhoto = async (slug) => {
-    if (!confirm("Are you sure you want to remove this photo?")) return;
-    setSubmitting(true);
-    setStatus("");
-
-    try {
-      const response = await fetch("/api/team-members/photo", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
-        body: JSON.stringify({ slug }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Delete failed");
-      }
-
-      setMembers((current) =>
-        current.map((member) => (member.slug === slug ? data.member : member))
-      );
-      if (slug === selectedSlug) setSelectedFile(null);
-      setStatus("Photo removed successfully.");
-    } catch (error) {
-      setStatus(error.message || "Unable to remove photo.");
     } finally {
       setSubmitting(false);
     }
@@ -289,153 +220,89 @@ const AdminPage = () => {
     setIsDragging(false);
   };
 
-  const autoSelectMemberByFileName = (file) => {
-    if (!file) return;
-    const fileName = file.name.toLowerCase().replace(/\.[a-z0-9]+$/i, '');
-    
-    // Look for best match in members
-    const matchedMember = members.find(m => 
-      m.slug.toLowerCase() === fileName || 
-      m.name.toLowerCase().replace(/\s+/g, '-') === fileName ||
-      fileName.includes(m.slug.toLowerCase()) ||
-      fileName.includes(m.name.toLowerCase().split(' ')[0])
-    );
-
-    if (matchedMember) {
-      setSelectedSlug(matchedMember.slug);
-    }
-  };
-
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      
-      if (validTypes.includes(file.type)) {
-        setSelectedFile(file);
-        autoSelectMemberByFileName(file);
-      } else {
-        setStatus("Invalid file type. Please upload a JPG, PNG, or WEBP.");
-      }
-    }
+    const file = e.dataTransfer.files?.[0] || null;
+    setSelectedFile(file);
   };
 
-  const handleNameChange = (slug, newNameValue) => {
-    setMembers(current => 
-      current.map(member => 
-        member.slug === slug ? { ...member, newName: newNameValue } : member
-      )
+  if (authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center font-urbanist text-xl text-primary-color">
+        Loading...
+      </div>
     );
-  };
-  
-  return (
-    <main className="min-h-screen bg-background px-4 py-10">
-      <div className="mx-auto w-full max-w-5xl rounded-3xl bg-white p-6 shadow-md sm:p-8">
-        <h1 className="font-autumn text-3xl text-primary-color">Team Photo Admin</h1>
-        <p className="mt-2 font-urbanist text-sm text-secondary-color">
-          Sign in, then upload, replace, or delete photo assets and update names for each team member.
-        </p>
+  }
 
-        {!supabase ? (
-          <p className="mt-6 rounded-xl bg-cream p-3 font-urbanist text-sm text-primary-color">
-            Configure Supabase environment variables to enable admin auth.
-          </p>
-        ) : authLoading ? (
-          <p className="mt-6 font-urbanist text-primary-color">Checking admin session...</p>
-        ) : !session ? (
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <label className="block font-urbanist text-sm text-primary-color">
-              Admin email
-              <input
-                className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-            <label className="block font-urbanist text-sm text-primary-color">
-              Password
-              <input
-                className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2"
-                type="password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-full bg-button-main px-6 py-3 font-urbanist font-bold text-primary-color disabled:opacity-60"
-            >
-              {submitting ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
-        ) : loading ? (
-          <p className="mt-6 font-urbanist text-primary-color">Loading team members...</p>
+  return (
+    <>
+      <Head>
+        <title>Admin Dashboard | Resonance</title>
+      </Head>
+      <div className="min-h-screen bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8">
+        {!session ? (
+          <div className="mx-auto max-w-md pt-20">
+            <h1 className="mb-8 text-center font-autumn text-5xl text-primary-color">Admin Portal</h1>
+            <form onSubmit={handleLogin} className="flex flex-col gap-5 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+              {status && <div className="rounded-xl bg-gray-50 p-4 text-center font-urbanist text-sm text-gray-800">{status}</div>}
+              <div>
+                <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Email Address</label>
+                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-base text-primary-color focus:border-secondary-color focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Password</label>
+                <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-base text-primary-color focus:border-secondary-color focus:outline-none" />
+              </div>
+              <button type="submit" disabled={submitting} className="mt-4 w-full rounded-2xl bg-secondary-color px-4 py-4 font-urbanist text-base font-bold text-white disabled:opacity-60">
+                {submitting ? "Signing in..." : "Sign In"}
+              </button>
+            </form>
+          </div>
         ) : (
-          <div className="mt-6 space-y-5">
-            <div className="flex flex-col gap-3 rounded-2xl bg-cream p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="font-urbanist text-sm text-primary-color">
-                Signed in as <span className="font-semibold">{session.user.email}</span>
-              </p>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-full bg-secondary-color px-5 py-2 font-urbanist text-sm font-semibold text-white"
-              >
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h1 className="font-autumn text-4xl text-primary-color md:text-5xl">Team Dashboard</h1>
+                <p className="mt-2 font-urbanist text-lg text-secondary-color">Manage your team members and details</p>
+              </div>
+              <button onClick={handleLogout} className="rounded-xl border border-gray-300 bg-white px-6 py-2 font-urbanist text-sm font-bold text-gray-700 hover:bg-gray-50">
                 Sign Out
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {/* New Member Card */}
-              <div className={`rounded-3xl border ${selectedSlug === "NEW_MEMBER" ? 'border-secondary-color bg-secondary-color/5' : 'border-dashed border-gray-300'} p-4 shadow-sm transition-all flex flex-col`}>
-                <div className="flex-1">
-                  <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-secondary-color">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                    </svg>
-                    Add New Team Member
-                  </div>
-                  <input 
-                    type="text" 
-                    value={newMemberName} 
-                    onChange={(e) => {
-                      setNewMemberName(e.target.value);
-                      setSelectedSlug("NEW_MEMBER");
-                    }}
-                    className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2 font-urbanist text-sm font-semibold text-primary-color"
-                    placeholder="Enter new member name..."
-                  />
+            {status && (
+              <div className={`mb-8 rounded-xl p-4 text-center font-urbanist text-sm ${status.includes('success') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                {status}
+              </div>
+            )}
+
+            {/* Container for Adding New Member */}
+            <div className="mb-12 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10">
+              <h2 className="mb-6 font-autumn text-3xl text-primary-color">Add New Team Member</h2>
+              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                {/* Photo Column */}
+                <div className="col-span-1 flex flex-col">
                   <div
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => {
-                      handleDrop(e);
-                      setSelectedSlug("NEW_MEMBER");
-                    }}
-                    onClick={() => {
-                      setSelectedSlug("NEW_MEMBER");
-                      document.getElementById(`photo-upload-new`).click();
-                    }}
-                    className={`flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-3 transition-colors duration-200 ${
-                      isDragging && selectedSlug === "NEW_MEMBER" ? "border-secondary-color bg-cream" : "border-gray-300 bg-white hover:bg-gray-50"
-                    }`}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById(`photo-upload-new`).click()}
+                    className={`flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed p-3 transition-colors duration-200 ${isDragging ? "border-button-main bg-cream" : "border-gray-300 bg-[#FDFBF7] hover:bg-gray-50"}`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="mb-2 h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    {selectedFile && selectedSlug === "NEW_MEMBER" ? (
-                      <p className="text-center text-xs font-semibold text-secondary-color break-all px-2">{selectedFile.name}</p>
+                    {selectedFile ? (
+                      <div className="relative h-full w-full overflow-hidden rounded-2xl">
+                        <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-200 hover:opacity-100">
+                          <span className="font-urbanist text-sm font-bold text-white shadow-sm">Change Photo</span>
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <p className="text-center text-sm text-gray-500 font-semibold mb-1">Upload Photo</p>
-                        <p className="text-center text-xs text-gray-400">JPG, PNG, WEBP (Max 5MB)</p>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="mb-2 h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-center font-urbanist text-sm text-gray-500">Drop image here or click to browse</span>
                       </>
                     )}
                     <input
@@ -445,132 +312,150 @@ const AdminPage = () => {
                       accept="image/jpeg,image/png,image/webp"
                       onChange={(event) => {
                         const file = event.target.files?.[0] || null;
-                        setSelectedSlug("NEW_MEMBER");
                         setSelectedFile(file);
                       }}
                     />
                   </div>
-                </div>
-                <div className="mt-4 flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={handleCreateMember}
-                    disabled={submitting || !newMemberName || !selectedFile || selectedSlug !== "NEW_MEMBER"}
-                    className="w-full rounded-xl bg-secondary-color px-4 py-2 font-urbanist text-sm font-bold text-white disabled:opacity-60"
+                    disabled={submitting || !newMemberName || !selectedFile}
+                    className="mt-6 w-full rounded-2xl bg-secondary-color px-4 py-4 font-urbanist text-base font-bold text-white disabled:opacity-60 transition-opacity shadow-md hover:shadow-lg"
                   >
-                    {submitting && selectedSlug === "NEW_MEMBER" ? "Creating..." : "Create Team Member"}
+                    {submitting ? "Creating..." : "Create Team Member"}
                   </button>
                 </div>
-              </div>
 
-              {/* Existing Members */}
-              {members.map((member) => (
-                <div key={member.slug} className={`rounded-3xl border ${selectedSlug === member.slug ? 'border-button-main bg-button-main/5' : 'border-gray-200'} p-4 shadow-sm transition-all flex flex-col`}>
-                  <div className="flex-1">
+                {/* Details Column */}
+                <div className="col-span-1 lg:col-span-2">
+                  <div className="mb-4">
+                    <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Full Name</label>
                     <input 
                       type="text" 
-                      value={member.newName ?? member.name} 
-                      onChange={(e) => handleNameChange(member.slug, e.target.value)}
-                      className="mb-2 w-full rounded-xl border border-gray-300 px-3 py-2 font-urbanist text-sm font-semibold text-primary-color"
-                      placeholder="Member Name"
+                      value={newMemberName} 
+                      onChange={(e) => setNewMemberName(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-base text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color"
+                      placeholder="E.g. Dr. Jane Doe"
                     />
-                    <div className="relative mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-2xl bg-cream">
-                      {member.image ? (
-                        <div className="group relative h-full w-full">
-                          <img
-                            src={member.image}
-                            alt={member.name}
-                            className="h-full w-full object-cover"
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Title</label>
+                      <input type="text" placeholder="E.g. Clinical Psychologist" value={newMemberDetails.title} onChange={(e) => setNewMemberDetails({...newMemberDetails, title: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" />
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Category</label>
+                      <div className="flex gap-2">
+                        {newMemberDetails.isNewCategory ? (
+                          <input 
+                            type="text" 
+                            placeholder="New Category Format (e.g. child-psychologist)" 
+                            value={newMemberDetails.category} 
+                            onChange={(e) => setNewMemberDetails({...newMemberDetails, category: e.target.value})} 
+                            className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color"
                           />
-                          <button
+                        ) : (
+                          <select value={newMemberDetails.category} onChange={(e) => setNewMemberDetails({...newMemberDetails, category: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color">
+                            <option value="">Select Category...</option>
+                            <option value="clinical-and-behavioral">Clinical Psychologist & Behaviour Therapist</option>
+                            <option value="developmental-therapist">Developmental Therapist</option>
+                            <option value="occupational-therapist">Occupational Therapist</option>
+                            <option value="speech-and-hearing-pathologist">Speech And Hearing Pathologist</option>
+                          </select>
+                        )}
+                        <button 
+                          type="button" 
+                          onClick={() => setNewMemberDetails({...newMemberDetails, isNewCategory: !newMemberDetails.isNewCategory, category: ''})}
+                          className="flex items-center justify-center rounded-xl bg-gray-100 px-4 py-3 font-bold text-secondary-color hover:bg-gray-200 shadow-sm transition-colors"
+                          title={newMemberDetails.isNewCategory ? "Select from list" : "Add custom category slug"}
+                        >
+                          {newMemberDetails.isNewCategory ? "List" : "+"}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Age Group</label>
+                      <input type="text" placeholder="E.g. All ages" value={newMemberDetails.age} onChange={(e) => setNewMemberDetails({...newMemberDetails, age: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" />
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Languages</label>
+                      <input type="text" placeholder="E.g. English, Hindi" value={newMemberDetails.languages} onChange={(e) => setNewMemberDetails({...newMemberDetails, languages: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Credentials</label>
+                      <input type="text" placeholder="E.g. MA, M.Phil" value={newMemberDetails.credentials} onChange={(e) => setNewMemberDetails({...newMemberDetails, credentials: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Short Description</label>
+                      <textarea placeholder="Brief overview of their role" value={newMemberDetails.description} onChange={(e) => setNewMemberDetails({...newMemberDetails, description: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" rows={2}></textarea>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Full Bio</label>
+                      <textarea placeholder="Detailed biography..." value={newMemberDetails.about} onChange={(e) => setNewMemberDetails({...newMemberDetails, about: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" rows={4}></textarea>
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Areas of Focus</label>
+                      <input type="text" placeholder="Comma separated" value={newMemberDetails.areasOfFocus} onChange={(e) => setNewMemberDetails({...newMemberDetails, areasOfFocus: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" />
+                    </div>
+                    <div>
+                      <label className="mb-2 block font-urbanist text-sm font-bold text-gray-700">Approach</label>
+                      <input type="text" placeholder="Comma separated" value={newMemberDetails.approach} onChange={(e) => setNewMemberDetails({...newMemberDetails, approach: e.target.value})} className="w-full rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-3 font-urbanist text-sm text-primary-color shadow-sm focus:border-secondary-color focus:outline-none focus:ring-1 focus:ring-secondary-color" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Container for Existing Members List displaying elegant cards */}
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10">
+              <h2 className="mb-6 font-autumn text-3xl text-primary-color">Existing Members</h2>
+              {loading ? (
+                <div className="py-12 text-center text-gray-500">Loading members...</div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {members.map((member) => (
+                    <div key={member.slug} className="group relative rounded-3xl border border-gray-200 p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md flex flex-col bg-white overflow-hidden">
+                      <div className="relative mb-4 h-56 w-full overflow-hidden rounded-2xl bg-[#FDFBF7]">
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full items-center justify-center font-urbanist text-xs text-secondary-color/50">No photo</span>
+                        )}
+
+                        {/* Hover Overlay with Edit/Delete options */}
+                        <div className="absolute inset-0 bg-primary-color/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-4 backdrop-blur-sm">
+                          <Link href={`/admin/edit/${member.slug}`} className="rounded-full bg-white p-3 text-secondary-color shadow-lg hover:scale-110 transition-transform" title="Edit member">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L5.314 19l.28-3.149a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                            </svg>
+                          </Link>
+                          <button 
                             type="button"
-                            onClick={() => handleDeletePhoto(member.slug)}
-                            className="absolute right-2 top-2 rounded-full bg-red-500 p-2 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
-                            title="Delete photo"
+                            onClick={() => handleDeleteMember(member.slug)}
+                            className="rounded-full bg-red-500 p-3 text-white shadow-lg hover:scale-110 transition-transform"
+                            title="Delete member"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                             </svg>
                           </button>
                         </div>
-                      ) : (
-                        <span className="font-urbanist text-xs text-secondary-color/50">No photo</span>
-                      )}
+                      </div>
+                      <div className="flex-[0] flex flex-col justify-start px-2 pb-2">
+                        <h3 className="truncate text-center font-autumn text-xl text-primary-color">{member.name}</h3>
+                        <p className="truncate text-center font-urbanist text-xs font-semibold text-secondary-color">{member.title}</p>
+                      </div>
                     </div>
-
-                    <div className="text-xs text-gray-500 mb-2">Upload new photo:</div>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => {
-                        handleDrop(e);
-                        setSelectedSlug(member.slug);
-                      }}
-                      onClick={() => {
-                        setSelectedSlug(member.slug);
-                        document.getElementById(`photo-upload-${member.slug}`).click();
-                      }}
-                      className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-3 transition-colors duration-200 ${
-                        isDragging && selectedSlug === member.slug ? "border-button-main bg-cream" : "border-gray-300 bg-white hover:bg-gray-50"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="mb-1 h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      {selectedFile && selectedSlug === member.slug ? (
-                        <p className="text-center text-xs font-semibold text-secondary-color break-all px-2">{selectedFile.name}</p>
-                      ) : (
-                        <p className="text-center text-xs text-gray-500">Drop here or click</p>
-                      )}
-                      <input
-                        id={`photo-upload-${member.slug}`}
-                        className="hidden"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0] || null;
-                          setSelectedSlug(member.slug);
-                          setSelectedFile(file);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 flex flex-col gap-2">
-                    {selectedSlug === member.slug && selectedFile ? (
-                      <button
-                        type="button"
-                        onClick={handleUpload}
-                        disabled={submitting}
-                        className="w-full rounded-xl bg-button-main px-4 py-2 font-urbanist text-sm font-bold text-primary-color disabled:opacity-60"
-                      >
-                        {submitting ? "Uploading..." : "Save Image & Name"}
-                      </button>
-                    ) : member.newName !== undefined && member.newName !== member.name ? (
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateNameOnly(member.slug, member.newName)}
-                        disabled={submitting}
-                        className="w-full rounded-xl bg-secondary-color px-4 py-2 font-urbanist text-sm font-bold text-white disabled:opacity-60"
-                      >
-                        {submitting ? "Saving..." : "Save New Name"}
-                      </button>
-                    ) : null}
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
-
-        {status ? (
-          <p className="mt-5 rounded-xl bg-cream p-3 font-urbanist text-sm text-primary-color">
-            {status}
-          </p>
-        ) : null}
       </div>
-    </main>
+    </>
   );
 };
 
 export default AdminPage;
+

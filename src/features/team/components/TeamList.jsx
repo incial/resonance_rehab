@@ -56,12 +56,46 @@ const TeamList = () => {
     }, 100);
   };
 
-  // Get members by category
-  const clinicalPsychologistsAndBehaviourTherapists =
-    getClinicalAndBehaviour(members);
-  const occupationalTherapists = getMembersByCategory(members, "occupational");
-  const speechPathologists = getMembersByCategory(members, "speech");
-  const specialEducators = getMembersByCategory(members, "special-educator");
+  // Group members dynamically by category
+  const groupedMembers = members.reduce((acc, member) => {
+    let category = member.category || "other";
+    
+    // Group clinical and behavioral therapists together to form exactly 4 categories
+    if (category === "clinical-physiologist" || category === "behavioral-therapist" || category === "clinical-and-behavioral") {
+      category = "clinical-and-behavioral";
+    } else if (category === "speech-and-hearing-pathologist") {
+      category = "speech-and-hearing-pathologist";
+    }
+
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(member);
+    return acc;
+  }, {});
+
+  const formatCategoryTitle = (slug) => {
+    if (!slug) return "Other";
+    if (slug === "clinical-and-behavioral") {
+      return "Clinical Psychologist & Behaviour Therapist";
+    }
+    if (slug === "speech-and-hearing-pathologist") {
+      return "Speech And Hearing Pathologist";
+    }
+    if (slug === "developmental-therapist") {
+      return "Developmental Therapist";
+    }
+    if (slug === "occupational-therapist") {
+      return "Occupational Therapist";
+    }
+    return slug
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  // Combine clinical & behavioural logic if they exist separately, but let's just render them all normally for max flexibility:
+  const categoriesToRender = Object.keys(groupedMembers).sort();
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,58 +143,13 @@ const TeamList = () => {
           </p>
         </div>
 
-        <section className="mb-12 sm:mb-16">
-          <h2 className="font-urbanist text-secondary-color font-semibold text-center mb-6 sm:mb-8 text-base sm:text-lg px-4">
-            Clinical Psychologist & Behaviour Therapist
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
-            {clinicalPsychologistsAndBehaviourTherapists.map((member) => (
-              <TeamCard
-                key={member.id}
-                member={member}
-                onClick={() => handleSelectMember(member)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="mb-12 sm:mb-16">
-          <h2 className="font-urbanist text-secondary-color font-semibold text-center mb-6 sm:mb-8 text-base sm:text-lg px-4">
-            Occupational Therapist
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
-            {occupationalTherapists.map((member) => (
-              <TeamCard
-                key={member.id}
-                member={member}
-                onClick={() => handleSelectMember(member)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="mb-12 sm:mb-16">
-          <h2 className="font-urbanist text-secondary-color font-semibold text-center mb-6 sm:mb-8 text-base sm:text-lg px-4">
-            Speech and Hearing Language Pathologist
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
-            {speechPathologists.map((member) => (
-              <TeamCard
-                key={member.id}
-                member={member}
-                onClick={() => handleSelectMember(member)}
-              />
-            ))}
-          </div>
-        </section>
-
-        {specialEducators.length > 0 && (
-          <section className="mb-12 sm:mb-16">
+        {categoriesToRender.map((categoryKey) => (
+          <section key={categoryKey} className="mb-12 sm:mb-16">
             <h2 className="font-urbanist text-secondary-color font-semibold text-center mb-6 sm:mb-8 text-base sm:text-lg px-4">
-              Developmental Therapist
+              {formatCategoryTitle(categoryKey)}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
-              {specialEducators.map((member) => (
+              {groupedMembers[categoryKey].map((member) => (
                 <TeamCard
                   key={member.id}
                   member={member}
@@ -169,7 +158,7 @@ const TeamList = () => {
               ))}
             </div>
           </section>
-        )}
+        ))}
       </div>
     </div>
   );

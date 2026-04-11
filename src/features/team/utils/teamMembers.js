@@ -10,8 +10,8 @@ export const getMembersByCategory = (members, category) =>
   members.filter((member) => member.category === category);
 
 export const getClinicalAndBehaviour = (members) => [
-  ...getMembersByCategory(members, "clinical-psychologist"),
-  ...getMembersByCategory(members, "behaviour-therapist"),
+  ...getMembersByCategory(members, "clinical-physiologist"),
+  ...getMembersByCategory(members, "behavioral-therapist"),
 ];
 
 export const defaultMembers = teamData.allMembers;
